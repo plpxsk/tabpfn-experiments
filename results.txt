@@ -1,0 +1,194 @@
+(env) tabpfn-experiments# python
+Python 3.9.10 (main, Jan 15 2022, 11:40:53) 
+[Clang 13.0.0 (clang-1300.0.29.3)] on darwin
+Type "help", "copyright", "credits" or "license" for more information.
+>>> from sklearn.metrics import accuracy_score
+>>> from sklearn.datasets import load_breast_cancer
+>>> from sklearn.model_selection import train_test_split
+>>> from tabpfn.scripts.transformer_prediction_interface import TabPFNClassifier
+>>> 
+>>> X, y = load_breast_cancer(return_X_y=True)
+>>> X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
+>>> classifier = TabPFNClassifier(device='cpu', N_ensemble_configurations=32)
+We have to download the TabPFN, as there is no checkpoint at  /Users/paul/github/tabpfn-experiments/env/lib/python3.9/site-packages/tabpfn/models_diff/prior_diff_real_checkpoint_n_0_epoch_100.cpkt
+It has about 100MB, so this might take a moment.
+
+Using style prior: True
+Using cpu:0 device
+Using a Transformer with 25.82 M parameters
+>>> 
+>>> classifier.fit(X_train, y_train)
+TabPFNClassifier(N_ensemble_configurations=32)
+>>> y_eval, p_eval = classifier.predict(X_test, return_winning_probability=True)
+>>> print('Accuracy', accuracy_score(y_test, y_eval))
+Accuracy 0.9840425531914894
+>>> 
+>>> 
+>>> import sklearn
+>>> from sklearn.ensemble import GradientBoostingClassifier
+>>> gbm = GradientBoostingClassifier()
+>>> gbm.fit(X_train, y_train)
+GradientBoostingClassifier()
+>>> preds = gbm.predict_proba(X_test)
+>>> preds[:5]
+array([[9.99821410e-04, 9.99000179e-01],
+       [9.99624674e-01, 3.75326119e-04],
+       [9.99381952e-01, 6.18048455e-04],
+       [4.17740096e-04, 9.99582260e-01],
+       [2.09037330e-04, 9.99790963e-01]])
+>>> preds = preds[:,1]
+>>> preds[:5]
+array([9.99000179e-01, 3.75326119e-04, 6.18048455e-04, 9.99582260e-01,
+       9.99790963e-01])
+>>> accuracy_score(y_test, preds)
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "/Users/paul/github/tabpfn-experiments/env/lib/python3.9/site-packages/sklearn/metrics/_classification.py", line 211, in accuracy_score
+    y_type, y_true, y_pred = _check_targets(y_true, y_pred)
+  File "/Users/paul/github/tabpfn-experiments/env/lib/python3.9/site-packages/sklearn/metrics/_classification.py", line 93, in _check_targets
+    raise ValueError(
+ValueError: Classification metrics can't handle a mix of binary and continuous targets
+>>> preds = gbm.predict(X_test)
+>>> preds[:5]
+array([1, 0, 0, 1, 1])
+>>> accuracy_score(y_test, preds)
+0.9521276595744681
+>>> sum(preds)
+122
+>>> sum(y_eval)
+120
+>>> sum(y_test)
+121
+>>> y_test.size
+188
+>>> X.shape
+(569, 30)
+>>> from sklearn.datasets import fetch_openml
+>>> X, y = fetch_openml("titanic", version=1, as_frame=True, return_X_y=True)
+
+>>> 
+>>> X.shape
+(1309, 13)
+>>> numeric_features = ["age", "fare"]
+>>> numeric_transformer = Pipeline(
+...     steps=[("imputer", SimpleImputer(strategy="median")), ("scaler", StandardScaler())]
+... )
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+NameError: name 'Pipeline' is not defined
+>>> 
+>>> categorical_features = ["embarked", "sex", "pclass"]
+>>> categorical_transformer = OneHotEncoder(handle_unknown="ignore")
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+NameError: name 'OneHotEncoder' is not defined
+>>> 
+>>> preprocessor = ColumnTransformer(
+...     transformers=[
+...         ("num", numeric_transformer, numeric_features),
+...         ("cat", categorical_transformer, categorical_features),
+...     ]
+... )
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+NameError: name 'ColumnTransformer' is not defined
+>>> from sklearn.compose import ColumnTransformer
+>>> from sklearn.datasets import fetch_openml
+>>> from sklearn.pipeline import Pipeline
+>>> from sklearn.impute import SimpleImputer
+>>> from sklearn.preprocessing import StandardScaler, OneHotEncoder
+>>> from sklearn.linear_model import LogisticRegression
+>>> from sklearn.model_selection import train_test_split, GridSearchCV
+>>> numeric_features = ["age", "fare"]
+>>> numeric_transformer = Pipeline(
+...     steps=[("imputer", SimpleImputer(strategy="median")), ("scaler", StandardScaler())]
+... )
+>>> 
+>>> categorical_features = ["embarked", "sex", "pclass"]
+>>> categorical_transformer = OneHotEncoder(handle_unknown="ignore")
+>>> 
+>>> preprocessor = ColumnTransformer(
+...     transformers=[
+...         ("num", numeric_transformer, numeric_features),
+...         ("cat", categorical_transformer, categorical_features),
+...     ]
+... )
+>>> clf = Pipeline(
+...     steps=[("preprocessor", preprocessor), ("classifier", LogisticRegression())]
+... 
+... 
+KeyboardInterrupt
+>>> 
+>>> 
+>>> clf = Pipeline(
+...     steps=[("preprocessor", preprocessor), ("classifier", gbm)]
+... )
+>>> clf
+Pipeline(steps=[('preprocessor',
+                 ColumnTransformer(transformers=[('num',
+                                                  Pipeline(steps=[('imputer',
+                                                                   SimpleImputer(strategy='median')),
+                                                                  ('scaler',
+                                                                   StandardScaler())]),
+                                                  ['age', 'fare']),
+                                                 ('cat',
+                                                  OneHotEncoder(handle_unknown='ignore'),
+                                                  ['embarked', 'sex',
+                                                   'pclass'])])),
+                ('classifier', GradientBoostingClassifier())])
+>>> X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+>>> 
+>>> clf.fit(X_train, y_train)
+Pipeline(steps=[('preprocessor',
+                 ColumnTransformer(transformers=[('num',
+                                                  Pipeline(steps=[('imputer',
+                                                                   SimpleImputer(strategy='median')),
+                                                                  ('scaler',
+                                                                   StandardScaler())]),
+                                                  ['age', 'fare']),
+                                                 ('cat',
+                                                  OneHotEncoder(handle_unknown='ignore'),
+                                                  ['embarked', 'sex',
+                                                   'pclass'])])),
+                ('classifier', GradientBoostingClassifier())])
+>>> print("model score: %.3f" % clf.score(X_test, y_test))
+model score: 0.817
+>>> 
+>>> 
+>>> 
+>>> 
+>>> clf = Pipeline(
+...     steps=[("preprocessor", preprocessor), ("classifier", classifier)]
+... )
+>>> clf.fit(X_train, y_train)
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "/Users/paul/github/tabpfn-experiments/env/lib/python3.9/site-packages/sklearn/pipeline.py", line 382, in fit
+    self._final_estimator.fit(Xt, y, **fit_params_last_step)
+  File "/Users/paul/github/tabpfn-experiments/env/lib/python3.9/site-packages/tabpfn/scripts/transformer_prediction_interface.py", line 174, in fit
+    raise ValueError("⚠️ WARNING: TabPFN is not made for datasets with a trainingsize > 1024. Prediction might take a while, be less reliable. We advise not to run datasets > 10k samples, which might lead to your machine crashing (due to quadratic memory scaling of TabPFN). Please confirm you want to run by passing overwrite_warning=True to the fit function.")
+ValueError: ⚠️ WARNING: TabPFN is not made for datasets with a trainingsize > 1024. Prediction might take a while, be less reliable. We advise not to run datasets > 10k samples, which might lead to your machine crashing (due to quadratic memory scaling of TabPFN). Please confirm you want to run by passing overwrite_warning=True to the fit function.
+>>> clf.fit(X_train, y_train, overwrite_warning=True)
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "/Users/paul/github/tabpfn-experiments/env/lib/python3.9/site-packages/sklearn/pipeline.py", line 377, in fit
+    fit_params_steps = self._check_fit_params(**fit_params)
+  File "/Users/paul/github/tabpfn-experiments/env/lib/python3.9/site-packages/sklearn/pipeline.py", line 300, in _check_fit_params
+    raise ValueError(
+ValueError: Pipeline.fit does not accept the overwrite_warning parameter. You can pass parameters to specific steps of your pipeline using the stepname__parameter format, e.g. `Pipeline.fit(X, y, logisticregression__sample_weight=sample_weight)`.
+>>> clf.fit(X_train, y_train, classifier__overwrite_warning=True)
+Pipeline(steps=[('preprocessor',
+                 ColumnTransformer(transformers=[('num',
+                                                  Pipeline(steps=[('imputer',
+                                                                   SimpleImputer(strategy='median')),
+                                                                  ('scaler',
+                                                                   StandardScaler())]),
+                                                  ['age', 'fare']),
+                                                 ('cat',
+                                                  OneHotEncoder(handle_unknown='ignore'),
+                                                  ['embarked', 'sex',
+                                                   'pclass'])])),
+                ('classifier', TabPFNClassifier(N_ensemble_configurations=32))])
+>>> print("model score: %.3f" % clf.score(X_test, y_test))
+model score: 0.809
+>>> 
